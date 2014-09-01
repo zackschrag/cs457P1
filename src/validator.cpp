@@ -27,8 +27,14 @@ void Validator::validateOptions(int argc, char **argv) {
 void Validator::validatePort(string number) {
 	for (string::iterator it=number.begin(); it != number.end(); ++it) {
 		if (!isdigit(*it)) {
+			cerr << "Please enter a valid port number - any integer from 1 - 65535" << endl;
 			printUsage();
 		}
+	}
+	int portNumber = atoi(number.c_str());
+	if (!(portNumber > 0 && portNumber < 65536)) {
+		cerr << "Please enter a valid port number; any integer from 1 - 65535" << endl;
+		printUsage();
 	}
 }
 
