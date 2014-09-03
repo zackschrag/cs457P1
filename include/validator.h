@@ -1,15 +1,7 @@
 #ifndef VALIDATOR_H
 #define VALIDATOR_H
 
-#include <stdlib.h>
-#include <iostream>
-#include <string>
-
-using std::cout;
-using std::cerr;
-using std::cin;
-using std::endl;
-using std::string;
+#include <p1.h>
 
 class Validator {
 public:

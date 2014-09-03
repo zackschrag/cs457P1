@@ -11,15 +11,14 @@ void Validator::validateOptions(int argc, char **argv) {
 		if (i != argc-1) {
 			optionValue = (string) argv[i+1];
 		}
-
+		if (option == "-h") {
+			printUsage();
+		}
 		if (option == "-p") {
 			validatePort(optionValue);
-			//cout << "portNumber " << portNumber << endl;
 		}
 		if (option == "-s") {
 			validateServer(optionValue);
-			//string server = (string) argv[i+1];
-			//cout << "server" << server << endl;
 		}
 	}
 }
