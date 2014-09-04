@@ -6,6 +6,8 @@
 class Client {
 public:
 	Client();
+
+	void clientConnect(int portNumber, struct sockaddr * clientAddress);
 };
 
 #endif

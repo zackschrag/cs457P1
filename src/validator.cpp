@@ -30,7 +30,7 @@ void Validator::validatePort(string number) {
 			printUsage();
 		}
 	}
-	int portNumber = atoi(number.c_str());
+	portNumber = atoi(number.c_str());
 	if (!(portNumber > 0 && portNumber < 65536)) {
 		cerr << "Please enter a valid port number; any integer from 1 - 65535" << endl;
 		printUsage();
@@ -56,6 +56,10 @@ void Validator::validateServer(string ip) {
 			printUsage();
 		}
 	}
+}
+
+int Validator::getPortNumber() {
+	return portNumber;
 }
 
 void Validator::printUsage() {

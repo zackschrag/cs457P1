@@ -6,6 +6,7 @@
 class Validator {
 public:
 	Validator(int argc, char **argv); // take command line inputs
+	int getPortNumber();
 
 private:
 	void validateOptions(int argc, char **argv);
