@@ -35,6 +35,7 @@ void Validator::validatePort(string number) {
 		cerr << "Please enter a valid port number; any integer from 1 - 65535" << endl;
 		printUsage();
 	}
+	portNumberAsString = number;
 }
 
 void Validator::validateServer(string ip) {
@@ -56,10 +57,19 @@ void Validator::validateServer(string ip) {
 			printUsage();
 		}
 	}
+	serverIP = ip;
 }
 
 int Validator::getPortNumber() {
 	return portNumber;
+}
+
+string Validator::getPortNumberAsString() {
+	return portNumberAsString;
+}
+
+string Validator::getServerIP() {
+	return serverIP;
 }
 
 void Validator::printUsage() {

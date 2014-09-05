@@ -7,6 +7,8 @@ class Validator {
 public:
 	Validator(int argc, char **argv); // take command line inputs
 	int getPortNumber();
+	string getPortNumberAsString();
+	string getServerIP();
 
 private:
 	void validateOptions(int argc, char **argv);
@@ -15,6 +17,7 @@ private:
 	void printUsage();
 
 	int portNumber;
+	string portNumberAsString;
 	string serverIP;
 };
 
