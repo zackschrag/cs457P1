@@ -1,104 +1,177 @@
-#include <p1.h>
 #include <validator.h>
-#include <client.h>
-#include <server.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <string.h>
 
 #define MAXPENDING 5
-#define SERVPORT 2222
+#define SERVPORT 2000
 
-// scp -r P1 zackschr@olympia.cs.colostate.edu:~/cs457/P1/
 int main(int argc, char **argv) {
 	Validator v(argc, argv);
-	//int portNumber = v.getPortNumber();
 	socklen_t ClientLen;
 	struct sockaddr_in ServAddr, ClientAddr;
-	ServAddr.sin_family = PF_INET;
+	ServAddr.sin_family = AF_INET;
 	ServAddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	ServAddr.sin_port = htons(SERVPORT);
+	int serverPort = SERVPORT;
 	int servSock;
+	short version = 457;
+
+	struct packet {
+		short version;
+		short stringLength;
+		char data[140];
+	};
 
 	if (argc == 1) {
-		cout << "Running as server." << endl;
-		if ((servSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) >= 0) {
-		cout << "servSock: " << servSock << endl;
-		if (bind(servSock, (struct sockaddr *) &ServAddr, sizeof(ServAddr)) == 0) {
-			cout << "binded" << endl;
-			listen(servSock, MAXPENDING);
-			cout << "listening on port " << SERVPORT << endl;
-			ClientLen = sizeof(ClientAddr);
-			if (accept(servSock, (struct sockaddr *) &ClientAddr, &ClientLen) < 0) {
-				cerr << "Error accepting" << endl;
+		cout << "Welcome to Chat!" << endl;
+		char ipAddress[128];
+		gethostname(ipAddress, sizeof(ipAddress));
+		struct hostent *h;
+		if((h=gethostbyname(ipAddress) ) == NULL ){
+     		cerr << "Error getting IP address. Please try again." << endl;
+     		v.printUsage();
+      		exit(1);
+    	}
+
+		if ((servSock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
+			cerr << "Error creating socket." << endl;
+			v.printUsage();
+			exit(1);
+		}
+		while (bind(servSock, (struct sockaddr *) &ServAddr, sizeof(ServAddr)) < 0) {
+			serverPort++;
+			ServAddr.sin_port = htons(serverPort);
+		}
+		cout << "Waiting for a connection on " <<  inet_ntoa(*((struct in_addr *)h->h_addr)) << " port " << serverPort << endl;
+		listen(servSock, MAXPENDING);
+		ClientLen = sizeof(ClientAddr);
+		int newSock;
+		if ((newSock = accept(servSock, (struct sockaddr *) &ClientAddr, &ClientLen)) < 0) {
+			cerr << "Error accepting connection." << endl;
+			v.printUsage();
+			exit(1);
+		}
+
+		int ctr = 0;
+
+		while (1) {
+			char incomingBuffer[144];
+			char outgoingBuffer[144];
+			char input[140];
+			string tempInput;
+			
+			packet incomingPacket;
+			packet outgoingPacket;
+			if (ctr == 0) {
+				cout << "Found a friend! You receive first." << endl;
 			}
-			cout << "Accepted connection!" << endl;
-			close(servSock);
+			cout << "Friend: ";
+			recv(newSock, incomingBuffer, sizeof(incomingBuffer), 0);
+			memcpy(&incomingPacket.version, incomingBuffer, 2);
+			memcpy(&incomingPacket.stringLength, incomingBuffer+2, 2);
+			incomingPacket.version = ntohs(incomingPacket.version);
+			incomingPacket.stringLength = ntohs(incomingPacket.stringLength);
+			memcpy(incomingPacket.data, incomingBuffer+4, incomingPacket.stringLength);
+			for (int i = 0; i < incomingPacket.stringLength; i++) {
+				cout << incomingPacket.data[i];
+			}
+			cout << endl;
+			cout << "You: ";
+			getline(cin, tempInput);
+			memcpy(input, tempInput.c_str(), sizeof(input));
+
+			while (strlen(input) > 140) {
+				cerr << "Error: message needs to be less than 140 characters. Try again." << endl;
+				cout << endl;
+				fflush(stdin);
+				cout << "You: ";
+				getline(cin, tempInput);
+				memcpy(input, tempInput.c_str(), sizeof(input));
+				ctr++;
+			}
+
+			outgoingPacket.version = htons(version);
+			outgoingPacket.stringLength = htons(strlen(input));
+			memcpy(outgoingPacket.data, input, sizeof(input));
+
+			// copy incomingPacket struct to incomingBuffer
+			memcpy(outgoingBuffer, &outgoingPacket, sizeof(outgoingBuffer));
+			send(newSock, outgoingBuffer, sizeof(outgoingBuffer), 0);
+			ctr++;
 		}
-		else {
-			cerr << "error binding" << endl;
-		}
-	}
-		//Server s;
-		//s.serverListen(2222);
+		close(servSock);
 	}
 	else {
-		cout << sizeof(char) << endl;
+		cout << "Connecting to server... ";
 		struct addrinfo hints, *res;
-		struct packet {
-			uint16_t version;
-			uint16_t stringLength;
-			char data[60];
-		};
 		int sockfd;
 
-		uint16_t version = 457;
-		//unsigned short stringLength = 56;
-
-
 		memset(&hints, 0, sizeof(hints));
-		hints.ai_family = PF_UNSPEC;
+		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_protocol = 6;
 
-		getaddrinfo("129.82.46.233", v.getPortNumberAsString().c_str(), &hints, &res);
+		getaddrinfo(v.getServerIP().c_str(), v.getPortNumberAsString().c_str(), &hints, &res);
 
 		sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
 
 		if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) {
-			cerr << "error connecting" << endl;
+			cerr << "\nError connecting. Please try again." << endl;
+			v.printUsage();
+			exit(1);
 		}
-		char input[140];
-		cout << "Connected to a friend! You send first." << endl;
-		cin >> input;
+		cout << "Connected!" << endl;
+		int ctr = 0;
+		while (1) {
+			char incomingBuffer[144];
+			char outgoingBuffer[144];
+			char input[140];
+			string tempInput;
+			packet incomingPacket;
+			packet outgoingPacket;
+			if (ctr == 0) {
+				cout << "Connected to a friend! You send first." << endl;
+			}
+			cout << "You: ";
+			getline(cin, tempInput);
+			memcpy(input, tempInput.c_str(), sizeof(input));
 
-		packet newPacket;
-		newPacket.version = version;
-		newPacket.stringLength = strlen(input);
-		memcpy(newPacket.data, input, strlen(input)+1);
+			if (strlen(input) > 140) {
+				cerr << "Error: message needs to be less than 140 characters. Try again." << endl;
+				memset(input, 0, sizeof(input));
+				fflush(stdin);
+				ctr++;
+				continue;
+			}
 
-		send(sockfd, &newPacket, (uint16_t) 60, 0);
+			outgoingPacket.version = htons(version);
+			outgoingPacket.stringLength = htons(strlen(input));
+			memcpy(outgoingPacket.data, input, sizeof(input));
 
-		/*cout << "Running as client." << endl;
-		//int portNumber = v.getPortNumber();
-		int clientSock;
-		if ((clientSock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) {
-			cerr << "error creating socket" << endl;
+			// copy incomingPacket struct to incomingBuffer
+			memcpy(outgoingBuffer, &outgoingPacket, sizeof(outgoingBuffer));
+
+			send(sockfd, outgoingBuffer, sizeof(outgoingBuffer), 0);
+			recv(sockfd, incomingBuffer, sizeof(incomingBuffer), 0);
+
+			memcpy(&incomingPacket.version, incomingBuffer, 2);
+			memcpy(&incomingPacket.stringLength, incomingBuffer+2, 2);
+			incomingPacket.version = ntohs(incomingPacket.version);
+			incomingPacket.stringLength = ntohs(incomingPacket.stringLength);
+			memcpy(incomingPacket.data, incomingBuffer+4, incomingPacket.stringLength);
+
+			cout << "Friend: ";
+			for (int i = 0; i < incomingPacket.stringLength; i++) {
+				cout << incomingPacket.data[i];
+			}
+			cout << endl;
+			ctr++;
 		}
-		cout << "clientSock: " << clientSock << endl;
-
-		ServAddr.sin_addr.s_addr = htonl(inet_addr(v.getServerIP().c_str()));
-		ServAddr.sin_port = htons(v.getPortNumber());
-		if (connect(clientSock,(struct sockaddr *) &ServAddr,sizeof(ServAddr)) < 0) {
-			cerr << "error connecting to server" << endl;
-		}
-		cout << "connected!" << endl;
-		close(clientSock);
-		//Client c;
-		//c.clientConnect();*/
+		delete res;
 	}
 	return 0;
 }

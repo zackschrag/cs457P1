@@ -9,12 +9,12 @@ public:
 	int getPortNumber();
 	string getPortNumberAsString();
 	string getServerIP();
+	void printUsage();
 
 private:
 	void validateOptions(int argc, char **argv);
 	void validatePort(string number);
 	void validateServer(string ip);
-	void printUsage();
 
 	int portNumber;
 	string portNumberAsString;
